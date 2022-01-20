@@ -24,6 +24,3 @@ The code can be called in the following way:
 
     wiki_process.py --lang=<language code> --spm=<spm model path> --get_categories
 
-For instance, for Catalan:
-
-    wiki_process.py --lang=ca --spm=../../spm/cawiki.spm.model --get_categories
