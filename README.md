@@ -7,7 +7,7 @@ This repo contains code to train a fruit fly document classifier for data in a g
 
 Before doing anything, we need to train a tokeniser to deal with the particular language of interest. This is done in the *spm* directory, by running:
 
-    python3 spm_train_on_wiki.py --lang=<language code>
+    python3 spm_train_on_wiki.py --lang=<language>
 
 The language code is the prefix to your Wikipedia url. For instance, The English Wikipedia is at *https://en.wikipedia.org/* so its language code is *en*. The Hindi Wikipedia is at *https://hi.wikipedia.org/*, so its language code is *hi*.
 
@@ -22,5 +22,5 @@ The *datasets* folder contains code to get a list of Wikipedia categories for a 
 
 The code can be called in the following way:
 
-    wiki_process.py --lang=<language code> --spm=<spm model path> --get_categories
+    wiki_process.py --lang=<language> --spm=<model_path> --get_categories
 
