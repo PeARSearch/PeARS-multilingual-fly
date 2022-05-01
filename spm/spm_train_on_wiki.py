@@ -1,12 +1,12 @@
 """Train a sentencepiece model on some Wikipedia data
 
 Usage:
-  spm_train_on_wiki.py --lang=<language code>
+  spm_train_on_wiki.py --lang=<language>
   spm_train_on_wiki.py (-h | --help)
   spm_train_on_wiki.py --version
 
 Options:
-  --lang=<language code>         The language of the Wikipedia to process.
+  --lang=<language>                   The language of the Wikipedia to process, e.g. pt for Portuguese.
   -h --help                      Show this screen.
   --version                      Show version.
 
@@ -14,6 +14,7 @@ Options:
 
 from docopt import docopt
 import os
+from pathlib import Path
 import re
 import bz2
 import sys
@@ -43,6 +44,7 @@ def get_wiki_links(lang):
         match = re.findall(lang+'wiki-latest-pages-articles.xml.bz2', html) #For wikis with only one dump file.
     match = list(set(match))
 
+    Path("./wiki_dump_links").mkdir(parents=True, exist_ok=True)
     filename = "./wiki_dump_links/"+lang+"_wiki_dump_links.txt"
     outf = open(filename,'w')
     for url in match:
