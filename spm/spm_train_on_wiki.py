@@ -106,7 +106,7 @@ def mk_linear(lang):
 
 def train_sentencepiece(txt_path):
     print("\n--- Training sentencepiece on corpus ---")
-    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=txt_path.replace('.raw.txt',''), vocab_size=10000, minloglevel=2)
+    spm.SentencePieceTrainer.train(input=txt_path, model_prefix="spm."+txt_path.replace('.raw.txt',''), vocab_size=10000, minloglevel=2)
     os.remove(txt_path)
     print("\n All done!! Your sentence piece model is at",txt_path.replace('.raw.txt','.model'),".")
 
