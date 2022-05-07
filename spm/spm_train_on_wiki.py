@@ -14,11 +14,13 @@ Options:
 
 from docopt import docopt
 import os
+from os.path import join
 import re
 import bz2
 import sys
 import gzip
 import shutil
+import pathlib
 import requests
 import subprocess
 import sentencepiece as spm
@@ -32,7 +34,8 @@ def bz2_uncompress(filepath):
     return newfilepath
 
 def read_wiki_links(lang):
-    with open("./wiki_dump_links/"+lang+"_wiki_dump_links.txt") as f:
+    links_dir = join(pathlib.Path(__file__).parent.resolve(),'wiki_dump_links')
+    with open(join(links_dir,lang+"_wiki_dump_links.txt")) as f:
         return f.read().splitlines()
 
 def get_wiki_links(lang):
@@ -43,7 +46,8 @@ def get_wiki_links(lang):
         match = re.findall(lang+'wiki-latest-pages-articles.xml.bz2', html) #For wikis with only one dump file.
     match = list(set(match))
 
-    filename = "./wiki_dump_links/"+lang+"_wiki_dump_links.txt"
+    links_dir = join(pathlib.Path(__file__).parent.resolve(),'wiki_dump_links')
+    filename = join(links_dir,lang+"_wiki_dump_links.txt")
     outf = open(filename,'w')
     for url in match:
         outf.write("https://dumps.wikimedia.org/"+lang+"wiki/latest/"+url+"\n")
@@ -57,6 +61,7 @@ def extract_xml(lang,wiki_paths):
 
     bz2_file = wiki_paths[0] # We only need one bz2 file
     print(bz2_file)
+    #subprocess.run(["wget",bz2_file, "-P",processed_dir])
     subprocess.run(["wget",bz2_file])
     local_file = bz2_file.split('/')[-1]
     uncompressed = bz2_uncompress(local_file)
@@ -102,20 +107,25 @@ def mk_linear(lang):
     return linear_filename
 
 
-def train_sentencepiece(txt_path):
+def train_sentencepiece(txt_path,lang):
     print("\n--- Training sentencepiece on corpus ---")
-    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=txt_path.replace('.raw.txt',''), vocab_size=10000, minloglevel=2)
+    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=join(join('spm',lang),txt_path.replace('.raw.txt','')), vocab_size=10000, minloglevel=2)
     os.remove(txt_path)
-    print("\n All done!! Your sentence piece model is at",txt_path.replace('.raw.txt','.model'),".")
+    print("\n All done!! Your sentence piece model is at",join(join('spm',lang),txt_path.replace('.raw.txt','.model')),".")
 
+def mk_spm(lang):
+    links_dir = join(pathlib.Path(__file__).parent.resolve(),'wiki_dump_links')
+    model_dir = join(pathlib.Path(__file__).parent.resolve(),lang)
+    pathlib.Path(links_dir).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(model_dir).mkdir(parents=True, exist_ok=True)
+    link_file = get_wiki_links(lang)
+    wiki_paths = read_wiki_links(lang)
+    extract_xml(lang,wiki_paths)
+    linear_file = mk_linear(lang)
+    train_sentencepiece(linear_file,lang)
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Train a sentencepiece model on Wikipedia, ver 0.1')
     lang = args['--lang']
     sp = spm.SentencePieceProcessor()
-
-    link_file = get_wiki_links(lang)
-    wiki_paths = read_wiki_links(lang)
-    extract_xml(lang,wiki_paths)
-    linear_file = mk_linear(lang)
-    train_sentencepiece(linear_file)
+    mk_spm(lang)
