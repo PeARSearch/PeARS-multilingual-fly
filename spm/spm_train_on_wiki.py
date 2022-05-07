@@ -1,12 +1,12 @@
 """Train a sentencepiece model on some Wikipedia data
 
 Usage:
-  spm_train_on_wiki.py --lang=<language code>
+  spm_train_on_wiki.py --lang=<language>
   spm_train_on_wiki.py (-h | --help)
   spm_train_on_wiki.py --version
 
 Options:
-  --lang=<language code>         The language of the Wikipedia to process.
+  --lang=<language>                   The language of the Wikipedia to process, e.g. pt for Portuguese.
   -h --help                      Show this screen.
   --version                      Show version.
 

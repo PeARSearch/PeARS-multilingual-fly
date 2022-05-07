@@ -1,13 +1,13 @@
 """Fruit Fly dataset preparation from Wikipedia in some language
 
 Usage:
-  wiki_process.py --lang=<language code> --spm=<spm model path> (--get_pages|--get_categories)
+  wiki_process.py --lang=<language> --spm=<model_path> (--get_pages|--get_categories)
   wiki_process.py (-h | --help)
   wiki_process.py --version
 
 Options:
-  --lang=<language code>         The language of the Wikipedia to process.
-  --spm=<spm model path>       The path to the sentencepiece model to use (e.g. spm/enwiki.model).
+  --lang=<language>         The language of the Wikipedia to process (e.g. pt).
+  --spm=<model_path>       The path to the sentencepiece model to use (e.g. ../spm/enwiki.model).
   --get_categories   Get categories and metacategories for the given language.
   --get_pages        Get pages for the categories selected by the user. To be run after --get_categories.
   -h --help          Show this screen.
