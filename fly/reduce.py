@@ -96,13 +96,12 @@ def apply_umap(lang, umap_model, dataset, save=True):
 
 
 
-def reduce(lang):
+def reduce_data(lang, birch_model):
+    print('\n-- Reduce data and apply clustering --')
     umap_dir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
     birch_dir = join(Path(__file__).parent.resolve(),join("models/birch",lang))
     umap_model_path = glob(join(umap_dir,"*umap"))[0]
-    birch_model_path = glob(join(birch_dir,"*birch"))[0]
     umap_model = joblib.load(umap_model_path)
-    birch_model = joblib.load(birch_model_path)
     
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:

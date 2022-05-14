@@ -28,31 +28,6 @@ def read_vocab(vocab_file):
     return vocab, reverse_vocab, logprobs
 
 
-def read_n_encode_dataset(path, vectorizer, logprobs):
-    # read
-    doc_list, label_list = [], []
-    doc = ""
-    with open(path) as f:
-        for l in f:
-            l = l.rstrip('\n')
-            if l[:4] == "<doc":
-                m = re.search(".*class=([^ ]*)>", l)
-                label = m.group(1)
-                label_list.append(label)
-            elif l[:5] == "</doc":
-                doc_list.append(doc)
-                doc = ""
-            else:
-                doc += l + ' '
-
-    # encode
-    X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
-    X = X.multiply(logprobs)
-
-    return X, label_list
-
-
 def hash_input_vectorized_(pn_mat, weight_mat, percent_hash):
     kc_mat = pn_mat.dot(weight_mat.T)
     #print(pn_mat.shape,weight_mat.shape,kc_mat.shape)

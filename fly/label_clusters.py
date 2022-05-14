@@ -1,44 +1,39 @@
 import pickle
-from glob import glob
+import numpy as np
 from os.path import join
-from nltk.corpus import stopwords
-from collections import Counter
+from fly.utils import read_vocab
+from fly.vectorizer import vectorize
 
-def generate_cluster_labels(lang=None, verbose=False):
-    #Merge all cl2titles dictionary files
+
+def generate_cluster_labels(lang=None, spf=None, labels=None, verbose=True):
     print('--- Generating cluster labels ---')
-    txt_f = open("./fly/langs_list.txt", "r")
-    dic={}
-    for line in txt_f:
-        line = line.rstrip("\n").split("\t")
-        dic[line[0]]=line[1]
-    if lang in dic:
-        stop_words=set(stopwords.words(dic[lang]))
-    else:
-        stop_words=set()
-    cl2titles_files = glob(join(f'./datasets/data/{lang}','*.cl2titles.pkl'))
-    clusters2titles = pickle.load(open(cl2titles_files[0],'rb'))
-    if len(cl2titles_files) > 1:
-        for f in cl2titles_files[1:]:
-            tmp = pickle.load(open(f,'rb'))
-            for cl,titles in tmp.items():
-                if cl in clusters2titles:
-                    clusters2titles[cl].extend(titles)
-                else:
-                    clusters2titles[cl] = titles
+    spm_vocab = f"./spm/{lang}/{lang}wiki.vocab"
+    _, reverse_vocab, _ = read_vocab(spm_vocab)
+    cl2idx = {}
+    for i in range(len(labels)):
+        cl = labels[i]
+        if cl in cl2idx:
+            cl2idx[cl].append(i)
+        else:
+            cl2idx[cl] = [i]
 
-    #Associate a single category label with each cluster
+    m, titles = vectorize(lang, spf)
+    print(m.shape,len(labels))
     cluster_titles = {}
-    for k,v in clusters2titles.items():
-        keywords = []
-        for title in v:
-            keywords.extend([w for w in title.split() if w not in stop_words])
-        c = Counter(keywords)
-        #category = ' '.join([pair[0]+' ('+str(pair[1])+')' for pair in c.most_common()[:5]])
-        category = ' '.join([pair[0] for pair in c.most_common()[:5]])
+    for cl,idx in cl2idx.items():
+        clm = m[idx]
+        pn_use = np.squeeze(np.asarray(clm.sum(axis=0)))
+        pn_use = pn_use / sum(pn_use)
+        pn_sorted_ids = np.argsort(pn_use)[:-pn_use.shape[0]-1:-1] #Give sorted list from most to least used PNs
+        pn_sorted_ids = np.squeeze(np.asarray(pn_sorted_ids))
+        vocab_sorted = [reverse_vocab[pn] for pn in pn_sorted_ids if reverse_vocab[pn].replace('▁','').isalpha()]
         if verbose:
-            print('\n',k,len(v),category,'\n',v[:20])
-        cluster_titles[k] = category
-
+            print(cl,len(idx),vocab_sorted[:10])
+        cluster_titles[cl] = ' '.join(vocab_sorted[:10])
+    file_path = f'./datasets/data/{lang}/{lang}wiki.cluster.labels.pkl'
+    with open(file_path,'wb') as f:
+        pickle.dump(cluster_titles,f)
     return cluster_titles
 
+
+#generate_cluster_labels('en', '../../PeARS-fruit-fly/web_map/umap/processed/enwiki-latest-pages-articles1.xml-p1p41242.sp')

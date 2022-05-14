@@ -60,6 +60,7 @@ def wta_vectorized(feature_mat, k, percent=True):
     kth_vals = feature_mat[rows, topk_indices].min(axis=1)
     # get boolean mask of values smaller than k-th
     is_smaller_than_kth = feature_mat < kth_vals[:, None]
+    print(kth_vals,is_smaller_than_kth)
     # replace mask by 0
     feature_mat[is_smaller_than_kth] = 0
     return feature_mat
