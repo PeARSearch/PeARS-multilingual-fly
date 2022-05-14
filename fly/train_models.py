@@ -11,10 +11,12 @@ import multiprocessing
 from sklearn.cluster import Birch
 from sklearn.linear_model import Ridge
 from sklearn.metrics import pairwise_distances
+from sklearn.model_selection import ParameterGrid
 
 from scipy.sparse import csr_matrix
 from scipy.sparse import vstack
 from fly.vectorizer import vectorize_scale
+from fly.evals import wiki_cat_purity
 from fly.fly import Fly
 
 
@@ -32,15 +34,30 @@ def train_birch(lang, m):
 
 #The default values here are from the BO on our Wikipedia dataset. Alternative in 2D for plotting.
 #def train_umap(logprob_power=7, umap_nns=5, umap_min_dist=0.1, umap_components=2):
-def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=16, umap_min_dist=0.0, umap_components=31):
+def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=0.0, umap_components=31):
     print('--- Training UMAP ---')
-    input_m, _ = vectorize_scale(lang,spf)[:50000]
-    umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
-
     dfile = spf.split('/')[-1].replace('.sp','.umap')
     model_dir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
     Path(model_dir).mkdir(exist_ok=True, parents=True)
     filename = join(model_dir,dfile)
+    
+    input_m, _ = vectorize_scale(lang, spf)[:50000]
+    param_grid = {'umap_nns' : [5,10,15,20], 'umap_min_dist': [0.0, 0.2, 0.4, 0.6, 0.8], 'umap_components':[2,8,16,32]}
+    grid = ParameterGrid(param_grid)
+    
+    scores = []
+    for p in grid:
+        #umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
+        umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='cosine', random_state=32).fit(input_m)
+        joblib.dump(umap_model, filename)
+        umap_m = umap_model.transform(input_m)
+        score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, num_nns=20, metric="cosine", verbose=False)
+        scores.append(score)
+        print("ORIG UMAP SCORE:",score, p)
+    best = np.argmax(scores)
+    print("BEST:",scores[best],"PARAMS:",grid[best])
+    p = grid[best]
+    umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='cosine', random_state=32).fit(input_m)
     joblib.dump(umap_model, filename)
     umap_m = umap_model.transform(input_m)
     return input_m, umap_m

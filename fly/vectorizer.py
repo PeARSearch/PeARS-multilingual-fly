@@ -14,12 +14,12 @@ def vectorize(lang, spf):
     vectorizer, logprobs = init_vectorizer(lang)
     dataset, wikititles, wikicats = read_n_encode_dataset(spf, vectorizer, logprobs, logprob_power)
     dataset = dataset.todense()
-    return dataset, wikititles
+    return dataset, wikititles, wikicats
 
 def scale(dataset):
     scaler = preprocessing.MinMaxScaler().fit(dataset)
     return scaler.transform(dataset)
 
 def vectorize_scale(lang,spf):
-    dataset, titles = vectorize(lang,spf)
+    dataset, titles, _ = vectorize(lang,spf)
     return scale(dataset), titles

@@ -74,7 +74,6 @@ def encode_docs(doc_list, vectorizer, logprobs, power):
 
 def read_n_encode_dataset(path, vectorizer, logprobs, power):
     # read
-    stopwords = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with', 'for', 'to', 'de', 'a']
     doc_list, title_list, label_list = [], [], []
     doc = ""
     with open(path) as f:
@@ -85,10 +84,8 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
                 title = m.group(1).lower()
                 title_list.append(title)
                 m = re.search(".*categories=\"([^\"]*)\"", l)
-                categories = m.group(1).replace('|',' ').lower()
-                keywords = title.split()+categories.split()
-                keywords = [k for k in keywords if k not in stopwords]
-                label_list.append(' '.join(keywords))
+                categories = m.group(1).lower().split('|')
+                label_list.append(categories)
             elif l[:5] == "</doc":
                 doc_list.append(doc)
                 doc = ""

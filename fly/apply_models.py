@@ -86,7 +86,7 @@ def fly(fly, spf, data_titles, cluster_labels, save=True):
         b = hashed_data[i][0].todense()
         #Transform long binary array into an int
         bstr = ''.join(str(i) for i in np.asarray(b)[0])
-        print(bstr,data_titles[i],cluster_labels[umap_labels[i]])
+        #print(bstr,data_titles[i],cluster_labels[umap_labels[i]])
         title2hash[data_titles[i]] = bstr
     if save:
         hfile = spf.replace('.sp','.fh')
