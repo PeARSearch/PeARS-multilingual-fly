@@ -8,11 +8,10 @@ def init_vectorizer(lang):
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
     return vectorizer, logprobs
 
-def vectorize(lang, spf):
+def vectorize(lang, spf, logprob_power, top_words):
     '''Takes input file and return vectorized /scaled dataset'''
-    logprob_power=7 #From BO on wikipedia
     vectorizer, logprobs = init_vectorizer(lang)
-    dataset, wikititles, wikicats = read_n_encode_dataset(spf, vectorizer, logprobs, logprob_power)
+    dataset, wikititles, wikicats = read_n_encode_dataset(spf, vectorizer, logprobs, logprob_power, top_words)
     dataset = dataset.todense()
     return dataset, wikititles, wikicats
 
@@ -20,6 +19,6 @@ def scale(dataset):
     scaler = preprocessing.MinMaxScaler().fit(dataset)
     return scaler.transform(dataset)
 
-def vectorize_scale(lang,spf):
-    dataset, titles, _ = vectorize(lang,spf)
+def vectorize_scale(lang, spf, logprob_power, top_words):
+    dataset, titles, _ = vectorize(lang,spf,logprob_power,top_words)
     return scale(dataset), titles

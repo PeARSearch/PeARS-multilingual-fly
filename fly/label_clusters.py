@@ -5,7 +5,7 @@ from fly.utils import read_vocab
 from fly.vectorizer import vectorize
 
 
-def generate_cluster_labels(lang=None, spf=None, labels=None, verbose=True):
+def generate_cluster_labels(lang=None, spf=None, labels=None, logprob_power=None, top_words=None, verbose=True):
     print('--- Generating cluster labels for Birch model ---')
     spm_vocab = f"./spm/{lang}/{lang}wiki.vocab"
     _, reverse_vocab, _ = read_vocab(spm_vocab)
@@ -17,7 +17,7 @@ def generate_cluster_labels(lang=None, spf=None, labels=None, verbose=True):
         else:
             cl2idx[cl] = [i]
 
-    m, titles, _ = vectorize(lang, spf)
+    m, titles, _ = vectorize(lang, spf, logprob_power, top_words)
     print(m.shape,len(labels))
     cluster_titles = {}
     for cl,idx in cl2idx.items():

@@ -49,7 +49,6 @@ def projection_vectorized(projection_mat, projection_functions):
 
 def wta_vectorized(feature_mat, k, percent=True):
     # thanks https://stackoverflow.com/a/59405060
-
     m, n = feature_mat.shape
     if percent:
         k = int(k * n / 100)
@@ -60,19 +59,19 @@ def wta_vectorized(feature_mat, k, percent=True):
     kth_vals = feature_mat[rows, topk_indices].min(axis=1)
     # get boolean mask of values smaller than k-th
     is_smaller_than_kth = feature_mat < kth_vals[:, None]
-    print(kth_vals,is_smaller_than_kth)
     # replace mask by 0
     feature_mat[is_smaller_than_kth] = 0
     return feature_mat
 
-def encode_docs(doc_list, vectorizer, logprobs, power):
+def encode_docs(doc_list, vectorizer, logprobs, power, top_words):
     logprobs = np.array([logprob ** power for logprob in logprobs])
     X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
     X = X.multiply(logprobs)
+    X = wta_vectorized(X.toarray(),top_words,False)
+    X = csr_matrix(X)
     return X
 
-def read_n_encode_dataset(path, vectorizer, logprobs, power):
+def read_n_encode_dataset(path=None, vectorizer=None, logprobs=None, power=7, top_words=50, verbose=False):
     # read
     doc_list, title_list, label_list = [], [], []
     doc = ""
@@ -93,7 +92,13 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
                 doc += l + ' '
 
     # encode
-    X = encode_docs(doc_list, vectorizer, logprobs, power)
+    X = encode_docs(doc_list, vectorizer, logprobs, power, top_words)
+    if verbose:
+        k = 10
+        inds = np.argpartition(X.todense(), -k, axis=1)[:, -k:]
+        for i in range(X.shape[0]):
+            ks = [list(vectorizer.vocabulary.keys())[list(vectorizer.vocabulary.values()).index(k)] for k in np.squeeze(np.asarray(inds[i]))]
+            print(title_list[i],ks)
     return X, title_list, label_list
 
 

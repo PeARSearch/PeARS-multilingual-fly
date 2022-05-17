@@ -15,9 +15,9 @@ from fly.fly import Fly
 
 
 
-def apply_umap(lang, umap_model, spf, save=True):
+def apply_umap(lang, umap_model, spf, logprob_power, save=True):
     print('\n---Applying UMAP---')
-    dataset, titles = vectorize_scale(lang, spf)
+    dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
     m = csr_matrix(umap_model.transform(dataset[:20000,:]))
 
     for i in range(20000,dataset.shape[0],20000):
@@ -44,7 +44,7 @@ def apply_birch(brc, dataset, data_titles, spf, save=True):
         print("Clustering",i,"to",i+20000)
         idx2clusters.extend(list(brc.predict(m[i:i+20000,:])))
 
-    print('--- Save Birch output in cl2cats and cl2idx pickled files (./processed folder) ---')
+    print('--- Save Birch output in idx2cl pickled file ---')
     #Count items in each cluster, using labels for whole data
     cluster_counts = Counter(idx2clusters)
     print(len(idx2clusters),cluster_counts)
@@ -56,8 +56,8 @@ def apply_birch(brc, dataset, data_titles, spf, save=True):
 
 
 
-def apply_hacked_umap(lang, ridge, spf, save=True):
-    dataset, titles = vectorize_scale(lang, spf)
+def apply_hacked_umap(lang, ridge, spf, logprob_power, save=True):
+    dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
     m = csr_matrix(ridge.predict(dataset[:20000,:]))
 
     for i in range(20000,dataset.shape[0],20000):
@@ -94,19 +94,19 @@ def fly(fly, spf, data_titles, cluster_labels, save=True):
     return score
 
 
-def apply_dimensionality_reduction(lang, birch_model):
+def apply_dimensionality_reduction(lang, birch_model, logprob_power):
     ridge_model = joblib.load(glob(join(f'./fly/models/umap/{lang}','*hacked.umap'))[0])
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
-        dataset, titles = apply_hacked_umap(lang, ridge_model, spf, True)
+        dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, True)
         apply_birch(birch_model, dataset, titles, spf, True)
             
 
-def apply_fly(lang):
+def apply_fly(lang, logprob_power, top_words):
     fly_model = joblib.load(glob(join(f'./fly/models/flies/{lang}','*fly.m'))[0])
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
-        dataset, titles = vectorize_scale(lang, spf)
+        dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
         cluster_path = f'./datasets/data/{lang}/{lang}wiki.cluster.labels.pkl'
         cluster_labels = pickle.load(open(cluster_path,'rb'))
         fly(fly_model, spf, titles, cluster_labels, True)

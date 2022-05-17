@@ -41,37 +41,55 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
     Path(model_dir).mkdir(exist_ok=True, parents=True)
     filename = join(model_dir,dfile)
     
-    input_m, _ = vectorize_scale(lang, spf)[:50000]
-    param_grid = {'umap_nns' : [5,10,15,20], 'umap_min_dist': [0.0, 0.2, 0.4, 0.6, 0.8], 'umap_components':[2,8,16,32]}
+    param_grid = {'logprob_power': [6], 'top_words': [400], 'umap_nns' : [15], 'umap_min_dist': [0.9, 0.95], 'umap_components':[32]}
+    #param_grid = {'logprob_power': [7], 'umap_nns' : [15], 'umap_min_dist': [0.8], 'umap_components':[32]}
     grid = ParameterGrid(param_grid)
     
     scores = []
     for p in grid:
+        input_m, _ = vectorize_scale(lang, spf, p['logprob_power'], p['top_words'])[:50000]
         #umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
-        umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='cosine', random_state=32).fit(input_m)
+        umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32).fit(input_m)
         joblib.dump(umap_model, filename)
         umap_m = umap_model.transform(input_m)
-        score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, num_nns=20, metric="cosine", verbose=False)
+        score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=False)
         scores.append(score)
         print("ORIG UMAP SCORE:",score, p)
     best = np.argmax(scores)
     print("BEST:",scores[best],"PARAMS:",grid[best])
     p = grid[best]
-    umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='cosine', random_state=32).fit(input_m)
+    umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32).fit(input_m)
+    umap_m = umap_model.transform(input_m)
+    wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=True)
     joblib.dump(umap_model, filename)
     umap_m = umap_model.transform(input_m)
-    return input_m, umap_m
+    best_logprob_power = p['logprob_power']
+    best_top_words = p['top_words']
+    return input_m, umap_m, best_logprob_power, best_top_words
 
-def hack_umap_model(lang=None, spf=None, input_m=None, umap_m=None):
-    print('--- Learning regression model over UMAP ---')
-    ridge = Ridge(alpha = 0.9)
-    ridge.fit(input_m, umap_m)
+def hack_umap_model(lang=None, spf=None, logprob_power=None, top_words=None, input_m=None, umap_m=None):
+    print('\n\n--- Learning regression model over UMAP ---')
     
+    scores = []
+    alphas = [0.1,0.3,0.5,0.7,0.9]
+    for a in alphas:
+        ridge = Ridge(alpha = a)
+        ridge.fit(input_m, umap_m)
+        ridge_m = ridge.predict(input_m)
+        score = wiki_cat_purity(lang=lang, spf=spf, m=ridge_m, logprob_power=logprob_power, top_words=top_words, num_nns=20, metric="cosine", verbose=False)
+        scores.append(score)
+        print("HACKED UMAP SCORE:",score, a)
+    
+    best = np.argmax(scores)
+    print("BEST:",scores[best], "ALPHA:",alphas[best])
     umap_dir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
     umap_model_path = glob(join(umap_dir,"*umap"))[0]
     cfile = umap_model_path.replace('.umap','.hacked.umap')
+    ridge = Ridge(alpha = alphas[best])
+    ridge.fit(input_m, umap_m)
+    ridge_m = ridge.predict(input_m)
     joblib.dump(ridge, cfile)
-    return ridge.predict(input_m)
+    return ridge_m
 
 def train_fly(lang=None, dataset=None, num_trials=None, logprob_power=7, kc_size=256, wta=50, proj_size=4, k=20):
     print('--- Spawning fruit flies ---')

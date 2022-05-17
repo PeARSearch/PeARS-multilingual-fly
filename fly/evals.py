@@ -3,9 +3,9 @@ from scipy.spatial.distance import cdist
 from fly.vectorizer import vectorize
 
 
-def wiki_cat_purity(lang=None, spf=None, m=None, num_nns=20, metric="cosine", verbose=False):
+def wiki_cat_purity(lang=None, spf=None, m=None, logprob_power=7, top_words=50, num_nns=20, metric="cosine", verbose=False):
 
-    _, _, wikicats = vectorize(lang, spf)
+    _, _, wikicats = vectorize(lang, spf, logprob_power, top_words)
     for i in range(len(wikicats)):
         try:
             wikicats[i].remove('')
