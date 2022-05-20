@@ -15,7 +15,7 @@ from fly.fly import Fly
 
 
 
-def apply_umap(lang, umap_model, spf, logprob_power, save=True):
+def apply_umap(lang, umap_model, spf, logprob_power, top_words, save=True):
     print('\n---Applying UMAP---')
     dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
     m = csr_matrix(umap_model.transform(dataset[:20000,:]))
@@ -56,7 +56,7 @@ def apply_birch(brc, dataset, data_titles, spf, save=True):
 
 
 
-def apply_hacked_umap(lang, ridge, spf, logprob_power, save=True):
+def apply_hacked_umap(lang, ridge, spf, logprob_power, top_words, save=True):
     dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
     m = csr_matrix(ridge.predict(dataset[:20000,:]))
 
@@ -94,11 +94,11 @@ def fly(fly, spf, data_titles, cluster_labels, save=True):
     return score
 
 
-def apply_dimensionality_reduction(lang, birch_model, logprob_power):
+def apply_dimensionality_reduction(lang, birch_model, logprob_power, top_words):
     ridge_model = joblib.load(glob(join(f'./fly/models/umap/{lang}','*hacked.umap'))[0])
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
-        dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, True)
+        dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, top_words, True)
         apply_birch(birch_model, dataset, titles, spf, True)
             
 

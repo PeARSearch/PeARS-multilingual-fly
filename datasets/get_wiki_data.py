@@ -52,10 +52,19 @@ def get_wiki_links(lang):
     outf.close()
     return filename
 
-def get_categories(bz2_file):
+def get_categories(bz2_file, lang):
     print("\n--- Get categories from corpus ---")
     xml_file = bz2_file.replace('bz2','xml')
     all_categories = {}
+
+    #Read file with translations of 'category'
+    cattransl = ""
+    for l in open("./datasets/wiki_markup_info.txt"):
+        l = l.rstrip('\n')
+        fields = l.split()
+        if fields[0] == lang:
+            cattransl = fields[1]
+            break
 
     title = ""
     f=open(xml_file,'r')
@@ -65,8 +74,8 @@ def get_categories(bz2_file):
             m = re.search('<title>([^<]*)<',l)
             title = m.group(1)
             all_categories[title] = []
-        if "[[Category:" in l:
-            m = re.search('\[\[Category:([^\]]*)\]\]',l)
+        if '[['+cattransl+':' in l:
+            m = re.search('\[\['+cattransl+':([^\]]*)\]\]',l)
             if m:
                 cat = m.group(1)
                 all_categories[title].append(cat)
@@ -170,7 +179,7 @@ def mk_wiki_data(lang):
         bz2_file = join(processed_dir,wiki_path.split('/')[-1])
 
         extract_xml(lang,bz2_file)
-        get_categories(bz2_file)
+        get_categories(bz2_file, lang)
         cat_file = bz2_file.replace('bz2','cats.pkl')
         mk_linear(bz2_file,cat_file)
         apply_spm(bz2_file,sp)
