@@ -1,7 +1,7 @@
 """Process a whole Wikipedia dump with the fruit fly
 
 Usage:
-  run.py --lang=<language code>
+  run.py --lang=<language_code>
   run.py (-h | --help)
   run.py --version
 
