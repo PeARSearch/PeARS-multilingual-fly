@@ -11,15 +11,13 @@ Options:
   --version                      Show version.
 
 """
+import glob
 
 from docopt import docopt
 import os
 from os.path import join
 import re
 import bz2
-import sys
-import gzip
-import shutil
 import pathlib
 import requests
 import subprocess
@@ -90,28 +88,30 @@ def mk_linear(lang):
     print("\n--- Generating linear version of corpus ---")
 
     xml_file = lang+'wiki.raw.xml'
-    tmp_linear_file = lang+'wiki.raw.tmp'
-    command = ['python3','-m','wikiextractor.WikiExtractor','--output',tmp_linear_file,'--no-templates','--html-safe','False',xml_file]
+    tmp_linear_folder = lang+'wiki.raw.tmp'
+    command = ['python3','-m','wikiextractor.WikiExtractor','--output',tmp_linear_folder,'--no-templates','--html-safe','False',xml_file]
     subprocess.run(command)
 
     os.remove(xml_file)
-    tmpf = open(tmp_linear_file,'r')
-    linear_filename = tmp_linear_file.replace('tmp','txt')
-    linear_file = open(linear_filename,'w')
-    for l in tmpf:
-        if "<doc" not in l and "</doc" not in l:
-            linear_file.write(l.lower())
+    files = glob.glob(tmp_linear_folder+"/*/*")
+    linear_filename =  tmp_linear_folder.replace("tmp", 'txt')
+    linear_file = open(linear_filename, 'w')
+    for file in files:
+        tmpf = open(file,'r')
+        for l in tmpf:
+            if "<doc" not in l and "</doc" not in l:
+                linear_file.write(l.lower())
+        tmpf.close()
     linear_file.close()
-    tmpf.close()
-    os.remove(tmp_linear_file)
+    os.rmdir(tmp_linear_folder)
     return linear_filename
 
 
 def train_sentencepiece(txt_path,lang):
     print("\n--- Training sentencepiece on corpus ---")
-    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=join(join('spm',lang),txt_path.replace('.raw.txt','')), vocab_size=10000, minloglevel=2)
+    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=join(lang,txt_path.replace('.raw.txt','')), vocab_size=10000, minloglevel=2)
     os.remove(txt_path)
-    print("\n All done!! Your sentence piece model is at",join(join('spm',lang),txt_path.replace('.raw.txt','.model')),".")
+    print("\n All done!! Your sentence piece model is at",join(lang,txt_path.replace('.raw.txt','model')),".")
 
 def mk_spm(lang):
     links_dir = join(pathlib.Path(__file__).parent.resolve(),'wiki_dump_links')
