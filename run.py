@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     train_fly(lang, train_path, 32)
     apply_fly(lang, best_logprob_power, best_top_words)
-    i#apply_fly(lang, 4, 300)
+    #apply_fly(lang, 4, 300)
 
     #tracker.stop()
 
