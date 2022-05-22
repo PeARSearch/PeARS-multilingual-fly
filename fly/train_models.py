@@ -41,16 +41,17 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
     Path(model_dir).mkdir(exist_ok=True, parents=True)
     filename = join(model_dir,dfile)
     
-    param_grid = {'logprob_power': [6,8], 'top_words': [300,400,500], 'umap_nns' : [15,20], 'umap_min_dist': [0.2, 0.6, 0.9], 'umap_components':[16, 32]}
+    param_grid = {'logprob_power': [4,6,8], 'top_words': [300,400,500], 'umap_nns' : [10,15,20], 'umap_min_dist': [0.2, 0.6, 0.9], 'umap_components':[16, 32]}
     #param_grid = {'logprob_power': [4], 'top_words': [300], 'umap_nns' : [15], 'umap_min_dist': [0.9], 'umap_components':[32]}
     grid = ParameterGrid(param_grid)
     
     scores = []
     for p in grid:
-        input_m, _ = vectorize_scale(lang, spf, p['logprob_power'], p['top_words'])[:50000]
+        input_m, _ = vectorize_scale(lang, spf, p['logprob_power'], p['top_words'])
         #umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
         umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32).fit(input_m)
         umap_m = umap_model.transform(input_m)
+        print("EXAMPLE UMAP VEC:",umap_m[0][:20])
         score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=False)
         scores.append(score)
         print("ORIG UMAP SCORE:",score, p)
@@ -75,6 +76,7 @@ def hack_umap_model(lang=None, spf=None, logprob_power=None, top_words=None, inp
         ridge = Ridge(alpha = a)
         ridge.fit(input_m, umap_m)
         ridge_m = ridge.predict(input_m)
+        print("EXAMPLE RIDGE VEC:",ridge_m[0][:20])
         score = wiki_cat_purity(lang=lang, spf=spf, m=ridge_m, logprob_power=logprob_power, top_words=top_words, num_nns=20, metric="cosine", verbose=False)
         scores.append(score)
         print("HACKED UMAP SCORE:",score, a)
@@ -82,8 +84,8 @@ def hack_umap_model(lang=None, spf=None, logprob_power=None, top_words=None, inp
     best = np.argmax(scores)
     print("BEST:",scores[best], "ALPHA:",alphas[best])
     umap_dir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
-    umap_model_path = glob(join(umap_dir,"*umap"))[0]
-    cfile = umap_model_path.replace('.umap','.hacked.umap')
+    umap_model_path = glob(join(umap_dir,"*.train.umap"))[0]
+    cfile = umap_model_path.replace('.train.umap','.train.hacked.umap')
     ridge = Ridge(alpha = alphas[best])
     ridge.fit(input_m, umap_m)
     ridge_m = ridge.predict(input_m)

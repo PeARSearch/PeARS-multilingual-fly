@@ -81,20 +81,19 @@ if __name__ == '__main__':
 
     if args['fly']:
         print("\n## Showing sample docs from fruit fly buckets) ##")
-        fh_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles*fh")
+        fh_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles1.*fh")
         shuffle(fh_files)
         random_fh_file = fh_files[0]
+        k = 20
         titles2fh = joblib.load(random_fh_file)
-        fh2titles = {}
-        for title,fh in titles2fh.items():
-            if fh not in fh2titles:
-                fh2titles[fh] = [title]
-            else:
-                fh2titles[fh].append(title)
-
-        for h,titles in fh2titles.items():
-            print(h,titles[:10])
-
+        all_titles = list(titles2fh.keys())
+        fhs = [[int(i) for i in fh] for fh in titles2fh.values()]
+        sample_m = np.array(fhs)[:10000]
+        hams = 1 - cdist(sample_m,sample_m,'hamming')
+        inds = np.argpartition(hams, -k, axis=1)[:, -k:]
+        for query in range(inds.shape[0]):
+            print(query, all_titles[query])
+            print([(all_titles[i],hams[query][i]) for i in inds[query]])
 
     if args['hack']:
         print("\n## Checking consistency of hacked UMAP ##")

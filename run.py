@@ -65,7 +65,7 @@ def get_training_data(train_spf_path):
         shuffle(spfs)
         for i in range(4):
             c = int(required_article_count / 4)
-            get_n_docs(spfs[i], train_spf) #Articles from other dump files
+            get_n_docs(spfs[i], train_spf, c) #Articles from other dump files
             print(">>> Gathered", c,"articles from ",spfs[i])
     train_spf.close()
     print(">>> Finished building the training corpus ---")
@@ -92,6 +92,7 @@ if __name__ == '__main__':
 
     train_fly(lang, train_path, 32)
     apply_fly(lang, best_logprob_power, best_top_words)
+    i#apply_fly(lang, 4, 300)
 
     #tracker.stop()
 
