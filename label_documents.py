@@ -1,4 +1,5 @@
-"""Hash documents with selected fly
+"""
+Label new documents from Common Crawl
 
 Usage:
   label_documents.py --lang=<language> --path_wet=<path>
