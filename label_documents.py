@@ -87,19 +87,19 @@ def identify_class(new_data, docs):
     shuffle(fh_files)
     random_fh_file = fh_files[0]
     k = 1
+    titles2fh = joblib.load(random_fh_file)  # title as key and binary hash as value
 
     """
     Stuck in this part of the code. I want to be able to retrieve the name of the clusters in order to 
     compare the texts against the name of the cluster and check whether they make sense. 
     """
-    titles2fh = joblib.load(random_fh_file)  #title as key and binary hash as value
-    cats = joblib.load(random_fh_file.replace(".fh", ".cats.pkl"))  # titles as keys and categories as values, I guess
-    clusters = joblib.load(random_fh_file.replace(".fh", ".idx2cl.pkl"))  # indices only
+    # cats = joblib.load(random_fh_file.replace(".fh", ".cats.pkl"))  # titles as keys and categories as values, I guess
+    # clusters = joblib.load(random_fh_file.replace(".fh", ".idx2cl.pkl"))  # indices only
 
-    titles2cats = {}
-    for title in titles2fh.keys():
-        if title in cats.keys():
-            titles2cats[title]=cats[title]
+    # titles2cats = {}
+    # for title in titles2fh.keys():
+    #     if title in cats.keys():
+    #         titles2cats[title]=cats[title]
 
     all_titles = list(titles2fh.keys())
     fhs = np.vstack([[i for i in fh] for fh in titles2fh.values()])
