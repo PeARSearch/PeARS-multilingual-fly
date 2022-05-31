@@ -28,7 +28,7 @@ from glob import glob
 import gzip
 import re
 
-def hash_documents(f_dataset):
+def read_xml(f_dataset):
   vocab, reverse_vocab, logprobs = read_vocab(spm_path.replace(".model", ".vocab"))
   vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
   doc=""
@@ -96,11 +96,6 @@ def identify_class(new_data, docs):
     # cats = joblib.load(random_fh_file.replace(".fh", ".cats.pkl"))  # titles as keys and categories as values, I guess
     # clusters = joblib.load(random_fh_file.replace(".fh", ".idx2cl.pkl"))  # indices only
 
-    # titles2cats = {}
-    # for title in titles2fh.keys():
-    #     if title in cats.keys():
-    #         titles2cats[title]=cats[title]
-
     all_titles = list(titles2fh.keys())
     fhs = np.vstack([[i for i in fh] for fh in titles2fh.values()])
 
@@ -116,7 +111,7 @@ def identify_class(new_data, docs):
 
 
 def label_documents(f_dataset, save=False):
-  m, docs, urls = hash_documents(f_dataset)
+  m, docs, urls = read_xml(f_dataset)
   m = apply_hacked_umap(m, ridge_model)
 
   hashed_data, _, _ = hash_dataset_(dataset_mat=m, weight_mat=fly_model.projections,
