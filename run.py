@@ -20,7 +20,7 @@ import joblib
 from codecarbon import EmissionsTracker
 from spm.spm_train_on_wiki import mk_spm
 from datasets.get_wiki_data import mk_wiki_data
-from fly.train_models import train_umap, hack_umap_model, train_birch, train_fly
+from fly.train_models import train_umap, hack_umap_model, run_pca, hack_pca_model, train_birch, train_fly
 from fly.apply_models import apply_dimensionality_reduction, apply_fly
 from fly.label_clusters import generate_cluster_labels
 
@@ -84,15 +84,17 @@ if __name__ == '__main__':
     get_training_data(train_path)
 
     input_m, umap_m, best_logprob_power, best_top_words = train_umap(lang, train_path)
+    #input_m, pca_m, best_logprob_power, best_top_words = run_pca(lang, train_path)
     print("LOG: BEST LOG POWER - ",best_logprob_power, "BEST TOP WORDS:", best_top_words)
     hacked_m = hack_umap_model(lang, train_path, best_logprob_power, best_top_words, input_m, umap_m)
+    #hacked_m = hack_pca_model(lang, train_path, best_logprob_power, best_top_words, input_m, pca_m)
     brm, labels = train_birch(lang, hacked_m)
-    apply_dimensionality_reduction(lang, brm, best_logprob_power, best_top_words)
     generate_cluster_labels(lang, train_path, labels, best_logprob_power, best_top_words)
+    
+    apply_dimensionality_reduction(lang, brm, best_logprob_power, best_top_words)
 
     train_fly(lang, train_path, 32)
     apply_fly(lang, best_logprob_power, best_top_words)
-    #apply_fly(lang, 4, 300)
 
     #tracker.stop()
 

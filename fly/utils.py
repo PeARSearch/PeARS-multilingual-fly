@@ -71,7 +71,7 @@ def encode_docs(doc_list, vectorizer, logprobs, power, top_words):
     X = csr_matrix(X)
     return X
 
-def read_n_encode_dataset(path=None, vectorizer=None, logprobs=None, power=7, top_words=50, verbose=False):
+def read_n_encode_dataset(path=None, vectorizer=None, logprobs=None, power=None, top_words=None, verbose=False):
     # read
     doc_list, title_list, label_list = [], [], []
     doc = ""
@@ -80,11 +80,14 @@ def read_n_encode_dataset(path=None, vectorizer=None, logprobs=None, power=7, to
             l = l.rstrip('\n')
             if l[:4] == "<doc":
                 m = re.search(".*title=\"([^\"]*)\"", l)
+                if m is None:
+                    print(l)
                 title = m.group(1).lower()
                 title_list.append(title)
                 m = re.search(".*categories=\"([^\"]*)\"", l)
-                categories = m.group(1).lower().split('|')
-                label_list.append(categories)
+                if m:
+                    categories = m.group(1).lower().split('|')
+                    label_list.append(categories)
             elif l[:5] == "</doc":
                 doc_list.append(doc)
                 doc = ""

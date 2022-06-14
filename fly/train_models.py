@@ -10,6 +10,7 @@ from joblib import Parallel, delayed
 import multiprocessing
 from sklearn.cluster import Birch
 from sklearn.linear_model import Ridge
+from sklearn.decomposition import PCA
 from sklearn.metrics import pairwise_distances
 from sklearn.model_selection import ParameterGrid
 
@@ -30,7 +31,68 @@ def train_birch(lang, m):
     n_clusters = np.unique(labels).size
     print("n_clusters : %d" % n_clusters)
     return brm, labels #NB: because of a highly recursive structure, the Birch model can cause issues pickling
-    
+  
+
+def run_pca(lang=None, spf=None):
+    print('\n\n--- Running PCA ---')
+    dfile = spf.split('/')[-1].replace('.sp','.pca')
+    model_dir = join(Path(__file__).parent.resolve(),join("models/pca",lang))
+    Path(model_dir).mkdir(exist_ok=True, parents=True)
+    filename = join(model_dir,dfile)
+
+    param_grid = {'logprob_power': [4,7], 'top_words': [100,300,500], 'n_components':[64,128,256]}
+    #param_grid = {'logprob_power': [4], 'top_words': [300], 'umap_nns' : [15], 'umap_min_dist': [0.9], 'umap_components':[32]}
+    grid = ParameterGrid(param_grid)
+
+    scores = []
+    for p in grid:
+        input_m, _ = vectorize_scale(lang, spf, p['logprob_power'], p['top_words'])
+        #input_m = csr_matrix(input_m)
+        print("\n>>> Computing PCA model...")
+        pca_model = PCA(n_components=p['n_components']).fit(input_m)
+        pca_m = pca_model.transform(input_m)
+        print(">>> Evaluating PCA model...")
+        score = wiki_cat_purity(lang=lang, spf=spf, m=pca_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=False)
+        scores.append(score)
+        print("ORIG PCA SCORE:",score, p)
+    best = np.argmax(scores)
+    print("BEST:",scores[best],"PARAMS:",grid[best])
+    p = grid[best]
+    pca_model = PCA(n_components=p['n_components']).fit(input_m)
+    pca_m = pca_model.transform(input_m)
+    #wiki_cat_purity(lang=lang, spf=spf, m=pca_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=True)
+    joblib.dump(pca_model, filename)
+    best_logprob_power = p['logprob_power']
+    best_top_words = p['top_words']
+    return input_m, pca_m, best_logprob_power, best_top_words
+
+
+def hack_pca_model(lang=None, spf=None, logprob_power=None, top_words=None, input_m=None, pca_m=None):
+    print('\n\n--- Learning regression model over PCA ---')
+
+    scores = []
+    alphas = [0.3,0.5,0.7]
+    for a in alphas:
+        ridge = Ridge(alpha = a)
+        ridge.fit(input_m, pca_m)
+        ridge_m = ridge.predict(input_m)
+        score = wiki_cat_purity(lang=lang, spf=spf, m=ridge_m, logprob_power=logprob_power, top_words=top_words, num_nns=20, metric="cosine", verbose=False)
+        scores.append(score)
+        print("HACKED UMAP SCORE:",score, a)
+
+    best = np.argmax(scores)
+    print("BEST:",scores[best], "ALPHA:",alphas[best])
+    pca_dir = join(Path(__file__).parent.resolve(),join("models/pca",lang))
+    pca_model_path = glob(join(pca_dir,"*train.pca"))[0]
+    cfile = pca_model_path.replace('train.pca','train.hacked.pca')
+    ridge = Ridge(alpha = alphas[best])
+    ridge.fit(input_m, pca_m)
+    ridge_m = ridge.predict(input_m)
+    joblib.dump(ridge, cfile)
+    return ridge_m
+
+
+
 
 #The default values here are from the BO on our Wikipedia dataset. Alternative in 2D for plotting.
 #def train_umap(logprob_power=7, umap_nns=5, umap_min_dist=0.1, umap_components=2):
@@ -41,7 +103,7 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
     Path(model_dir).mkdir(exist_ok=True, parents=True)
     filename = join(model_dir,dfile)
     
-    param_grid = {'logprob_power': [4,6,8], 'top_words': [300,400,500], 'umap_nns' : [10,15,20], 'umap_min_dist': [0.2, 0.6, 0.9], 'umap_components':[16, 32]}
+    param_grid = {'logprob_power': [6,8], 'top_words': [300,400,500], 'umap_nns' : [15,20], 'umap_min_dist': [0.2, 0.6, 0.9], 'umap_components':[16, 32]}
     #param_grid = {'logprob_power': [4], 'top_words': [300], 'umap_nns' : [15], 'umap_min_dist': [0.9], 'umap_components':[32]}
     grid = ParameterGrid(param_grid)
     
@@ -51,7 +113,6 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
         #umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
         umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32).fit(input_m)
         umap_m = umap_model.transform(input_m)
-        print("EXAMPLE UMAP VEC:",umap_m[0][:20])
         score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=False)
         scores.append(score)
         print("ORIG UMAP SCORE:",score, p)
@@ -62,7 +123,6 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
     umap_m = umap_model.transform(input_m)
     wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=True)
     joblib.dump(umap_model, filename)
-    umap_m = umap_model.transform(input_m)
     best_logprob_power = p['logprob_power']
     best_top_words = p['top_words']
     return input_m, umap_m, best_logprob_power, best_top_words
@@ -71,12 +131,11 @@ def hack_umap_model(lang=None, spf=None, logprob_power=None, top_words=None, inp
     print('\n\n--- Learning regression model over UMAP ---')
     
     scores = []
-    alphas = [0.1,0.3,0.5,0.7,0.9]
+    alphas = [0.3,0.5,0.7]
     for a in alphas:
         ridge = Ridge(alpha = a)
         ridge.fit(input_m, umap_m)
         ridge_m = ridge.predict(input_m)
-        print("EXAMPLE RIDGE VEC:",ridge_m[0][:20])
         score = wiki_cat_purity(lang=lang, spf=spf, m=ridge_m, logprob_power=logprob_power, top_words=top_words, num_nns=20, metric="cosine", verbose=False)
         scores.append(score)
         print("HACKED UMAP SCORE:",score, a)
@@ -84,8 +143,8 @@ def hack_umap_model(lang=None, spf=None, logprob_power=None, top_words=None, inp
     best = np.argmax(scores)
     print("BEST:",scores[best], "ALPHA:",alphas[best])
     umap_dir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
-    umap_model_path = glob(join(umap_dir,"*.train.umap"))[0]
-    cfile = umap_model_path.replace('.train.umap','.train.hacked.umap')
+    umap_model_path = glob(join(umap_dir,"*umap"))[0]
+    cfile = umap_model_path.replace('.umap','.hacked.umap')
     ridge = Ridge(alpha = alphas[best])
     ridge.fit(input_m, umap_m)
     ridge_m = ridge.predict(input_m)

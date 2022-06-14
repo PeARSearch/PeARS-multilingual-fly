@@ -41,16 +41,16 @@ if __name__ == '__main__':
 
     if args['umap']:
         print("\n## Showing distribution of articles across clusters (UMAP representations) ##")
-        sp_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles*sp")
+        sp_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles1.*sp")
         shuffle(sp_files)
         random_sp_file = sp_files[0]
         umap_m = joblib.load(random_sp_file.replace('sp','umap.m')).todense()
         idx2cl = pickle.load(open(random_sp_file.replace('sp','idx2cl.pkl'),'rb'))
-        _, all_titles,_ = vectorize(lang, random_sp_file, 4, 300)
+        _, all_titles,_ = vectorize(lang, random_sp_file, 6, 500)
 
         cl2titles = {}
         for idx,cl in enumerate(idx2cl):
-            print(all_titles[idx],cl)
+            #print(all_titles[idx],cl)
             if cl not in cl2titles:
                 cl2titles[cl] = [all_titles[idx]]
             else:
@@ -101,8 +101,8 @@ if __name__ == '__main__':
         sp_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles1.*sp")
         shuffle(sp_files)
         random_sp_file = sp_files[0]
-        logprob_power = 4
-        top_words = 300
+        logprob_power = 6
+        top_words = 500
         hacked_m, all_titles = apply_hacked_umap(lang, ridge_model, random_sp_file, logprob_power, top_words, save=False)
         k = 10
         sample_m = hacked_m.todense()[:10000]
