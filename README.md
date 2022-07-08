@@ -10,6 +10,8 @@ The entire pipeline can be run using the following command:
 
 The language code is the prefix to your Wikipedia url. For instance, The English Wikipedia is at *https://en.wikipedia.org/* so its language code is *en*. The Hindi Wikipedia is at *https://hi.wikipedia.org/*, so its language code is *hi*.
 
+If you are curious about what happens in the background, go and check out [the wiki](https://github.com/PeARSearch/PeARS-multilingual-fly/wiki). 
+
 **NB:** for large Wikipedia snapshots, processing will take a long time. For the largest wikis (English, German, French, Dutch...) this can easily run into an entire day, depending on the number and strength of CPUs on your machine. You may want to try out of the pipeline on a smaller wiki first, to get a feel for the system. (The [simple English Wikipedia](https://simple.wikipedia.org/wiki/Main_Page) may be a good choice, and can be run using *--lang=simple*. But in all likelihood, the processing will still take a few hours.)
 
 
@@ -65,3 +67,8 @@ run.py --lang=<language_code> --train_pca
 ```
 
 This will train a PCA model rather than UMAP, which give slightly worse document representations but may be kinder to your machine.
+
+
+## Inspecting the output
+
+You can inspect the configuration of the representations built over Wikipedia, by using the *analyze.py* tool. Please check [the wiki](https://github.com/PeARSearch/PeARS-multilingual-fly/wiki/Analysis) for more details.
