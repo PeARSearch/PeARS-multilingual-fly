@@ -1,6 +1,9 @@
 # A PeARS fly in any language
 
-This repo contains code to train a fruit fly document classifier for data in a given language. The provided pipeline assumes the user will be training the fly on data collected from Wikipedia and return a representation of the entire dump as 256-bit locality-sensitive binary vectors. 
+This repo contains all the tools needed to process the documents of an entire Wikipedia snapshot and convert them into PeARS document representations, labeled with cluster names. The high-level idea is that you input Wikipedia and you output a map of current knowledge organised into topics (the clusters) and represented in binary form. The binary vectors are locality-sensitive, i.e. you can compute semantic similarity over them. The result of this processing step is a stable semantic grid, which you can attach new documents to. For instance, if you index a Medium post on AI, the system should give it a representation located in the AI/ML cluster of the Wikipedia map. In the future, this will allow for faster search, as a query on AI is only compared to documents in the AI cluster, rather than all documents available in the PeARS collection.
+
+**Output:** a representation of an entire Wikipedia dump as 256-bit locality-sensitive binary vectors. 
+
 
 ## Running the entire pipeline in one go
 
