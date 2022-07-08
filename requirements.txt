@@ -17,7 +17,7 @@ numpy==1.19.5
 pandas==1.1.5
 psutil==5.9.0
 py-cpuinfo==8.0.0
-pynndescent==0.5.6
+pynndescent==0.5.7
 pynvml==11.4.1
 python-dateutil==2.8.2
 pytz==2022.1
@@ -27,6 +27,7 @@ scikit-learn==0.24.2
 scipy==1.5.4
 sentencepiece==0.1.96
 six==1.16.0
+tbb==2021.6.0
 threadpoolctl==3.1.0
 tqdm==4.64.0
 typing_extensions==4.1.1

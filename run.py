@@ -1,17 +1,35 @@
 """Process a whole Wikipedia dump with the fruit fly
 
 Usage:
-  run.py --lang=<language_code>
+  run.py --lang=<language_code> --pipeline
+  run.py --lang=<language_code> --train_tokenizer
+  run.py --lang=<language_code> --download_wiki
+  run.py --lang=<language_code> --train_umap
+  run.py --lang=<language_code> --train_pca
+  run.py --lang=<language_code> --cluster_data
+  run.py --lang=<language_code> --train_fly
+  run.py --lang=<language_code> --binarize_data
+
   run.py (-h | --help)
   run.py --version
 
 Options:
   --lang=<language code>         The language of the Wikipedia to process.
+  --pipeline                     Run the whole pipeline (this can take several hours!)
+  --train_tokenizer              Train a sentencepiece tokenizer for a language.
+  --download_wiki                Download and preprocess Wikipedia for the chosen language.
+  --train_umap                   Train the UMAP dimensionality reduction model.
+  --train_pca                    Train a PCA dimensionality reduction model (alternative to UMAP).
+  --cluster_data                 Learn cluster names and apply clustering to the entire Wikipedia.
+  --train_fly                    Train the fruit fly over dimensionality-reduced representations.
+  --binarize_data                Apply the fruit fly to the entire Wikipedia.
   -h --help                      Show this screen.
   --version                      Show version.
 
 """
 
+import configparser
+from os.path import exists
 from docopt import docopt
 from glob import glob
 from random import shuffle
@@ -70,6 +88,40 @@ def get_training_data(train_spf_path):
     train_spf.close()
     print(">>> Finished building the training corpus ---")
 
+def init_config(lang):
+    config_path = lang+'.hyperparameters.cfg'
+    if exists(config_path):
+        return 1
+    else:
+        config = configparser.ConfigParser()
+        config['GENERIC'] = {}
+        config['GENERIC']['language'] = lang
+        config['PREPROCESSING'] =  {}
+        config['PREPROCESSING']['logprob_power'] = 'None'
+        config['PREPROCESSING']['top_words'] =  'None'
+        config['REDUCER'] =  {}
+        config['REDUCER']['path'] = 'None'
+        config['RIDGE'] =  {}
+        config['RIDGE']['path'] = 'None'
+        config['FLY'] =  {}
+        config['FLY']['num_trials'] =  'None'
+        config['FLY']['kc_size'] = 'None' 
+        config['FLY']['neighbours'] =  'None'
+        config['FLY']['path'] = 'None'
+        with open(config_path, 'w+') as configfile:
+            config.write(configfile)
+
+def read_config(lang):
+    config_path = lang+'.hyperparameters.cfg'
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config_path, config
+
+def update_config(lang, section, k, v):
+    config_path, config = read_config(lang)
+    config[section][k] = str(v)
+    with open(config_path, 'w+') as configfile:
+        config.write(configfile)
 
 
 if __name__ == '__main__':
@@ -78,23 +130,59 @@ if __name__ == '__main__':
     #tracker = EmissionsTracker(output_dir="./emission_tracking", project_name="Multilingual Fly")
     #tracker.start()
 
-    mk_spm(lang)
-    mk_wiki_data(lang)
+    init_config(lang)
     train_path = f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles.train.sp"
-    get_training_data(train_path)
 
-    input_m, umap_m, best_logprob_power, best_top_words = train_umap(lang, train_path)
-    #input_m, pca_m, best_logprob_power, best_top_words = run_pca(lang, train_path)
-    print("LOG: BEST LOG POWER - ",best_logprob_power, "BEST TOP WORDS:", best_top_words)
-    hacked_m = hack_umap_model(lang, train_path, best_logprob_power, best_top_words, input_m, umap_m)
-    #hacked_m = hack_pca_model(lang, train_path, best_logprob_power, best_top_words, input_m, pca_m)
-    brm, labels = train_birch(lang, hacked_m)
-    generate_cluster_labels(lang, train_path, labels, best_logprob_power, best_top_words)
+    if args['--train_tokenizer'] or args['--pipeline']:
+        mk_spm(lang)
     
-    apply_dimensionality_reduction(lang, brm, best_logprob_power, best_top_words)
+    if args['--download_wiki'] or args['--pipeline']:
+        mk_wiki_data(lang)
+        get_training_data(train_path)
 
-    train_fly(lang, train_path, 32)
-    apply_fly(lang, best_logprob_power, best_top_words)
+    if args['--train_umap'] or args['--pipeline']:
+        umap_path, input_m, umap_m, best_logprob_power, best_top_words = train_umap(lang, train_path)
+        print("UMAP LOG: BEST LOG POWER - ",best_logprob_power, "BEST TOP WORDS:", best_top_words)
+        update_config(lang, 'PREPROCESSING', 'logprob_power', best_logprob_power)
+        update_config(lang, 'PREPROCESSING', 'top_words', best_top_words)
+        update_config(lang, 'REDUCER', 'path', umap_path)
+        hacked_path, hacked_m = hack_umap_model(lang, train_path, best_logprob_power, best_top_words, input_m, umap_m)
+        update_config(lang, 'RIDGE', 'path', hacked_path)
+
+    if args['--train_pca']:
+        pca_path, input_m, pca_m, best_logprob_power, best_top_words = run_pca(lang, train_path)
+        print("PCA LOG: BEST LOG POWER - ",best_logprob_power, "BEST TOP WORDS:", best_top_words)
+        update_config(lang, 'PREPROCESSING', 'logprob_power', best_logprob_power)
+        update_config(lang, 'PREPROCESSING', 'top_words', best_top_words)
+        update_config(lang, 'REDUCER', 'path', pca_path)
+        hacked_path, hacked_m = hack_pca_model(lang, train_path, best_logprob_power, best_top_words, input_m, pca_m)
+        update_config(lang, 'RIDGE', 'path', hacked_path)
+
+    if args['--cluster_data'] or args['--pipeline']:
+        _ , config = read_config(lang)
+        best_logprob_power = int(config['PREPROCESSING']['logprob_power'])
+        best_top_words = int(config['PREPROCESSING']['top_words'])
+        hacked_path = config['RIDGE']['path']
+        hacked_m = joblib.load(hacked_path+'.m') 
+        brm, labels = train_birch(lang, hacked_m)
+        generate_cluster_labels(lang, train_path, labels, best_logprob_power, best_top_words)
+        apply_dimensionality_reduction(lang, hacked_path, brm, best_logprob_power, best_top_words)
+
+    if args['--train_fly'] or args['--pipeline']:
+        num_trials = 10
+        kc_size = 256
+        k = 20
+        update_config(lang, 'FLY', 'num_trials', num_trials)
+        update_config(lang, 'FLY', 'kc_size', kc_size)
+        update_config(lang, 'FLY', 'neighbours', k)
+        fly_path, _ = train_fly(lang=lang, dataset=train_path, num_trials=num_trials, kc_size=kc_size, k=k)
+        update_config(lang, 'FLY', 'path', fly_path)
+    
+    if args['--binarize_data'] or args['--pipeline']:
+        _, config = read_config(lang)
+        best_logprob_power = config['PREPROCESSING']['logprob_power']
+        best_top_words = config['PREPROCESSING']['top_words']
+        apply_fly(lang, best_logprob_power, best_top_words)
 
     #tracker.stop()
 

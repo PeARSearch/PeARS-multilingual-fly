@@ -94,8 +94,8 @@ def fly(fly, spf, data_titles, cluster_labels, save=True):
     return score
 
 
-def apply_dimensionality_reduction(lang, birch_model, logprob_power, top_words):
-    ridge_model = joblib.load(glob(join(f'./fly/models/umap/{lang}','*hacked.umap'))[0])
+def apply_dimensionality_reduction(lang, hacked_path, birch_model, logprob_power, top_words):
+    ridge_model = joblib.load(hacked_path)
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
         dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, top_words, True)

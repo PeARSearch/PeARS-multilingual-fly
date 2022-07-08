@@ -12,13 +12,15 @@ def wiki_cat_purity(lang=None, spf=None, m=None, logprob_power=7, top_words=50, 
             wikicats[i].remove(' ')
         except:
             pass
-    batch = 1024
+    #We are doing things in batch to limit computational load of cosine similarity matrix
+    #Drawback: batch length may be too small to get reliable neighbours
+    batch = 1024 
     scores = [] # List for purity of each nearest neighbour set
     n_batches = int(m.shape[0] / batch)
     for i in range(0, n_batches * batch, batch): #Looping through batch
         sims = 1 - cdist(m[i:i+batch:,], m, metric=metric)
         inds = np.argpartition(sims, -num_nns, axis=1)[:, -num_nns:]
-        for j in range(sims.shape[0]): #Looping through nearest neighbours of one batch
+        for j in range(sims.shape[0]): #Looping through rows of similarity matrix
             c = 0     #Number of instances with categories for target and NNs
             score = 0 #Score for that batch
             if len(wikicats[i+j]) == 0:

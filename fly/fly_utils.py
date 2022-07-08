@@ -28,15 +28,6 @@ def read_vocab(vocab_file):
     return vocab, reverse_vocab, logprobs
 
 
-def encode_docs(doc_list, vectorizer, logprobs, power=False):
-    if power:
-        logprobs = np.array([logprob ** power for logprob in logprobs])
-    X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
-    X = X.multiply(logprobs)
-    return X
-
-
 def hash_input_vectorized_(pn_mat, weight_mat, percent_hash):
     kc_mat = pn_mat.dot(weight_mat.T)
     #print(pn_mat.shape,weight_mat.shape,kc_mat.shape)
