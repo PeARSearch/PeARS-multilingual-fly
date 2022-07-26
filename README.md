@@ -5,6 +5,20 @@ This repo contains all the tools needed to process the documents of an entire Wi
 **Output:** a representation of an entire Wikipedia dump as 256-bit locality-sensitive binary vectors. 
 
 
+## Install
+
+We recommend to run the code in a virtual environment:
+
+    git clone https://github.com/PeARSearch/PeARS-multilingual-fly.git
+    virtualenv PeARS-multilingual-fly/env
+    cd PeARS-multilingual-fly
+    source env/bin/activate
+
+Install the requirements:
+
+    pip install -r requirements.txt
+
+
 ## Running the entire pipeline in one go
 
 The entire pipeline can be run using the following command:
