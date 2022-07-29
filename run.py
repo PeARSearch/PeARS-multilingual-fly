@@ -100,6 +100,8 @@ def init_config(lang):
         config['PREPROCESSING']['logprob_power'] = 'None'
         config['PREPROCESSING']['top_words'] =  'None'
         config['REDUCER'] =  {}
+        config['REDUCER']['type'] =  'None'
+        config['REDUCER']['dimensionality'] =  'None'
         config['REDUCER']['path'] = 'None'
         config['RIDGE'] =  {}
         config['RIDGE']['path'] = 'None'
@@ -146,6 +148,8 @@ if __name__ == '__main__':
         update_config(lang, 'PREPROCESSING', 'logprob_power', best_logprob_power)
         update_config(lang, 'PREPROCESSING', 'top_words', best_top_words)
         update_config(lang, 'REDUCER', 'path', umap_path)
+        update_config(lang, 'REDUCER', 'type', 'UMAP')
+        update_config(lang, 'REDUCER', 'dimensionality', str(umap_m.shape[1]))
         hacked_path, hacked_m = hack_umap_model(lang, train_path, best_logprob_power, best_top_words, input_m, umap_m)
         update_config(lang, 'RIDGE', 'path', hacked_path)
 
@@ -155,6 +159,8 @@ if __name__ == '__main__':
         update_config(lang, 'PREPROCESSING', 'logprob_power', best_logprob_power)
         update_config(lang, 'PREPROCESSING', 'top_words', best_top_words)
         update_config(lang, 'REDUCER', 'path', pca_path)
+        update_config(lang, 'REDUCER', 'type', 'PCA')
+        update_config(lang, 'REDUCER', 'dimensionality', str(pca_m.shape[1]))
         hacked_path, hacked_m = hack_pca_model(lang, train_path, best_logprob_power, best_top_words, input_m, pca_m)
         update_config(lang, 'RIDGE', 'path', hacked_path)
 
@@ -180,8 +186,8 @@ if __name__ == '__main__':
     
     if args['--binarize_data'] or args['--pipeline']:
         _, config = read_config(lang)
-        best_logprob_power = config['PREPROCESSING']['logprob_power']
-        best_top_words = config['PREPROCESSING']['top_words']
+        best_logprob_power = int(config['PREPROCESSING']['logprob_power'])
+        best_top_words = int(config['PREPROCESSING']['top_words'])
         apply_fly(lang, best_logprob_power, best_top_words)
 
     #tracker.stop()

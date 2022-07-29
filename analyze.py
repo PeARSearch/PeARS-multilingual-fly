@@ -83,22 +83,17 @@ if __name__ == '__main__':
 
     if args['fly']:
         print("\n## Showing sample docs from fruit fly buckets) ##")
-        fh_files = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles.*fh")
+        fh_files = glob(f"./datasets/data/{lang}/fhs/*fh")
         shuffle(fh_files)
         random_fh_file = fh_files[0]
-        k = 10
-        print("--> sample file",random_fh_file)
-        titles2fh = joblib.load(random_fh_file)
+        print("RANDOM FILE:",random_fh_file)
+        fh_tls = joblib.load(random_fh_file)
+        titles = fh_tls[1]
+        fh = fh_tls[0].todense()
+        print("SAMPLE TITLES:", titles[:20])
+        hams = 1 - cdist(fh,fh,'hamming')
+        print("AVG HAMMING:",np.mean(hams))
 
-        all_titles = list(titles2fh.keys())
-        fhs = [[int(i) for i in fh] for fh in titles2fh.values()]
-        print("HASH SIZE:", len(fhs[0]))
-        sample_m = np.array(fhs)[:10000]
-        hams = 1 - cdist(sample_m,sample_m,'hamming')
-        inds = np.argpartition(hams, -k, axis=1)[:,-k:]
-        for query in range(inds.shape[0]):
-            print(query, all_titles[query])
-            print([(all_titles[i],hams[query][i]) for i in inds[query]])
 
     if args['hack']:
         print("\n## Checking consistency of hacked UMAP ##")

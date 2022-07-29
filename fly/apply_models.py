@@ -11,6 +11,7 @@ import numpy as np
 import umap
 from fly.vectorizer import vectorize_scale
 from fly.fly import Fly
+from pathlib import Path
 
 
 
@@ -72,25 +73,33 @@ def apply_hacked_umap(lang, ridge, spf, logprob_power, top_words, save=True):
     return dataset, titles
 
 
-def fly(fly, spf, data_titles, cluster_labels, save=True):
+def fly(lang, fly, spf, data_titles):
     print('--- Apply fly to',spf,'---')
+    save_dir = f'./datasets/data/{lang}/fhs'
+    Path(save_dir).mkdir(exist_ok=True, parents=True)
+    
     umap_mat = joblib.load(spf.replace('.sp','.umap.m'))
     idx2cl = pickle.load(open(spf.replace('sp','idx2cl.pkl'),'rb'))
     umap_labels = [idx2cl[i] for i in range(len(idx2cl))]
     #Compute precision at k using cluster IDs from Birch model
     score, hashed_data = fly.evaluate(umap_mat,umap_mat,umap_labels,umap_labels)
 
-    #Save hashes 
-    title2hash = {}
-    for i in range(hashed_data.shape[0]):
-        b = hashed_data[i][0].todense()
-        #Transform long binary array into an int
-        bstr = ''.join(str(i) for i in np.asarray(b)[0])
-        #print(bstr,data_titles[i],cluster_labels[umap_labels[i]])
-        title2hash[data_titles[i]] = bstr
-    if save:
-        hfile = spf.replace('.sp','.fh')
-        joblib.dump(title2hash, hfile)
+    #Check length 
+    print(hashed_data.shape,len(idx2cl))
+
+    #Save hashes per class 
+    for cl in list(set(idx2cl)):
+        hfile = join(save_dir,spf.split('/')[-1].replace('sp',str(cl)+'.fh'))
+        idx = [i for i,c in enumerate(idx2cl) if c == cl]
+        tls = [t for i,t in enumerate(data_titles) if i in idx]
+        if exists(hfile):
+            shf = joblib.load(hfile)
+            m = vstack((shf[1],hashed_data[idx]))
+            titles = hf[0].extend(tls)
+        else:
+            m = hashed_data[idx]
+            titles = tls
+        joblib.dump([m, titles], hfile)
     return score
 
 
@@ -106,7 +115,9 @@ def apply_fly(lang, logprob_power, top_words):
     fly_model = joblib.load(glob(join(f'./fly/models/flies/{lang}','*fly.m'))[0])
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
+        if 'train.sp' in spf:
+            continue
         dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
-        cluster_path = f'./datasets/data/{lang}/{lang}wiki.cluster.labels.pkl'
-        cluster_labels = pickle.load(open(cluster_path,'rb'))
-        fly(fly_model, spf, titles, cluster_labels, True)
+        #cluster_path = f'./datasets/data/{lang}/{lang}wiki.cluster.labels.pkl'
+        #cluster_labels = pickle.load(open(cluster_path,'rb'))
+        fly(lang, fly_model, spf, titles)
