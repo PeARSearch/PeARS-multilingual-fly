@@ -7,3 +7,4 @@ it Categoria
 vi Thể loại
 oc Categoria
 nl Categorie
+ml വർഗ്ഗം

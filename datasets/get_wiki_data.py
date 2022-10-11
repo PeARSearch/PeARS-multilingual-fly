@@ -141,45 +141,54 @@ def apply_spm(bz2_file,sp):
     start_doc=""
     doc=""
     txt_path = bz2_file.replace('bz2','raw.txt')
-    spm_filename = bz2_file.replace('.bz2','.sp') 
+    spm_filename = bz2_file.replace('.bz2','.sp')
     spf = open(spm_filename,'w')
-    
+    snippet_filename = bz2_file.replace('.bz2','.snippets')
+    snipf = open(snippet_filename,'w')
+
     f = open(txt_path,'r')
     for l in f:
         if '<doc' in l:
             start_doc = l
         elif '</doc' in l:
             if len(doc) >= 1000: #Only keep long enough docs
-                doc = ' '.join([wp for wp in sp.encode_as_pieces(doc)])+'\n'
+                spmdoc = ' '.join([wp for wp in sp.encode_as_pieces(doc)])+'\n'
+                #Write spf file
                 spf.write(start_doc)
-                spf.write(doc)
+                spf.write(spmdoc)
                 spf.write(l)
+
+                #Write snippet file
+                snipf.write(start_doc)
+                snipf.write(doc[:500])
+                snipf.write(l)
             doc = ""
         else:
             if len(doc) < 1500 and len(l) > 0:
                 doc+=l
     f.close()
     spf.close()
+    snipf.close()
     os.remove(txt_path)
     print("\n All done!! Your sentencepieced corpus is at",spm_filename,".")
 
-def mk_wiki_data(lang):
-    sp_model_path = f"./spm/{lang}/{lang}wiki.model"
+
+def mk_wiki_data(lang_input, lang_model):
+    sp_model_path = f"./spm/{lang_model}/{lang_model}wiki.model"
     sp = spm.SentencePieceProcessor()
     sp.load(sp_model_path)
+    processed_dir = join(pathlib.Path(__file__).parent.resolve(),join('data',lang_input))
 
-    processed_dir = join(pathlib.Path(__file__).parent.resolve(),join('data',lang))
-
-    link_file = get_wiki_links(lang)
-    wiki_paths = read_wiki_links(lang)
+    link_file = get_wiki_links(lang_input)
+    wiki_paths = read_wiki_links(lang_input)
 
     for wiki_path in wiki_paths:
         print(wiki_path)
         subprocess.run(["wget",wiki_path, "-P",processed_dir])
         bz2_file = join(processed_dir,wiki_path.split('/')[-1])
 
-        extract_xml(lang,bz2_file)
-        get_categories(bz2_file, lang)
+        extract_xml(lang_input,bz2_file)
+        get_categories(bz2_file, lang_input)
         cat_file = bz2_file.replace('bz2','cats.pkl')
         mk_linear(bz2_file,cat_file)
         apply_spm(bz2_file,sp)

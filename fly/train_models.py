@@ -113,7 +113,7 @@ def train_umap(lang=None, spf=None, logprob_power=7, umap_nns=20, umap_min_dist=
     for p in grid:
         input_m, _ = vectorize_scale(lang, spf, p['logprob_power'], p['top_words'])
         #umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(input_m)
-        umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32, verbose=True).fit(input_m)
+        umap_model = umap.UMAP(n_neighbors=p['umap_nns'], min_dist=p['umap_min_dist'], n_components=p['umap_components'], metric='hellinger', random_state=32, verbose=False).fit(input_m)
         umap_m = umap_model.transform(input_m)
         score = wiki_cat_purity(lang=lang, spf=spf, m=umap_m, logprob_power=p['logprob_power'], top_words=p['top_words'], num_nns=20, metric="cosine", verbose=False)
         scores.append(score)

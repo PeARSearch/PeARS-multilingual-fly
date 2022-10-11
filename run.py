@@ -9,6 +9,7 @@ Usage:
   run.py --lang=<language_code> --cluster_data
   run.py --lang=<language_code> --train_fly
   run.py --lang=<language_code> --binarize_data
+  run.py --s2e
 
   run.py (-h | --help)
   run.py --version
@@ -23,6 +24,7 @@ Options:
   --cluster_data                 Learn cluster names and apply clustering to the entire Wikipedia.
   --train_fly                    Train the fruit fly over dimensionality-reduced representations.
   --binarize_data                Apply the fruit fly to the entire Wikipedia.
+  --s2e                          Hack to apply simple wiki models to en wiki.
   -h --help                      Show this screen.
   --version                      Show version.
 
@@ -40,10 +42,10 @@ from spm.spm_train_on_wiki import mk_spm
 from datasets.get_wiki_data import mk_wiki_data
 from fly.train_models import train_umap, hack_umap_model, run_pca, hack_pca_model, train_birch, train_fly
 from fly.apply_models import apply_dimensionality_reduction, apply_fly
-from fly.label_clusters import generate_cluster_labels
+from fly.prepare_clusters import generate_cluster_labels, generate_cluster_centroids
 
 
-def get_training_data(train_spf_path):
+def get_training_data(lang, train_spf_path):
 
     def get_n_docs(input_file_path, output_file, n):
         article_count = 0
@@ -132,15 +134,16 @@ if __name__ == '__main__':
     #tracker = EmissionsTracker(output_dir="./emission_tracking", project_name="Multilingual Fly")
     #tracker.start()
 
-    init_config(lang)
-    train_path = f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles.train.sp"
+    if args['--lang']:
+        init_config(lang)
+        train_path = f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles.train.sp"
 
     if args['--train_tokenizer'] or args['--pipeline']:
         mk_spm(lang)
     
     if args['--download_wiki'] or args['--pipeline']:
-        mk_wiki_data(lang)
-        get_training_data(train_path)
+        mk_wiki_data(lang, lang) #In the normal case, input and spm model case are the same language
+        get_training_data(lang, train_path)
 
     if args['--train_umap'] or args['--pipeline']:
         umap_path, input_m, umap_m, best_logprob_power, best_top_words = train_umap(lang, train_path)
@@ -172,7 +175,9 @@ if __name__ == '__main__':
         hacked_m = joblib.load(hacked_path+'.m') 
         brm, labels = train_birch(lang, hacked_m)
         generate_cluster_labels(lang, train_path, labels, best_logprob_power, best_top_words)
-        apply_dimensionality_reduction(lang, hacked_path, brm, best_logprob_power, best_top_words)
+        apply_dimensionality_reduction(lang, hacked_path, best_logprob_power, best_top_words, brm)
+        if lang == 'simple':
+            apply_dimensionality_reduction('en', hacked_path, best_logprob_power, best_top_words)
 
     if args['--train_fly'] or args['--pipeline']:
         num_trials = 10
@@ -186,9 +191,13 @@ if __name__ == '__main__':
     
     if args['--binarize_data'] or args['--pipeline']:
         _, config = read_config(lang)
+        generate_cluster_centroids(train_path)
         best_logprob_power = int(config['PREPROCESSING']['logprob_power'])
         best_top_words = int(config['PREPROCESSING']['top_words'])
         apply_fly(lang, best_logprob_power, best_top_words)
+        if lang == 'simple':
+            apply_fly('simple', best_logprob_power, best_top_words, 'en')
+
 
     #tracker.stop()
 
