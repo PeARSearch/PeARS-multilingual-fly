@@ -16,7 +16,6 @@ def vectorize(lang, spf, logprob_power, top_words):
     return dataset, wikititles, wikicats
 
 def scale(dataset):
-    #scaler = preprocessing.MinMaxScaler().fit(dataset)
     scaler = preprocessing.Normalizer(norm='l2').fit(dataset)
     return scaler.transform(dataset)
 
