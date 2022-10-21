@@ -107,13 +107,13 @@ def mk_linear(lang):
     return linear_filename
 
 
-def train_sentencepiece(txt_path,lang):
+def train_sentencepiece(txt_path,lang, vocab_size):
     print("\n--- Training sentencepiece on corpus ---")
-    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=join(join('spm',lang),txt_path.replace('.raw.txt','')), vocab_size=10000, minloglevel=2)
+    spm.SentencePieceTrainer.train(input=txt_path, model_prefix=join(join('spm',lang),txt_path.replace('.raw.txt','')), vocab_size=vocab_size, minloglevel=2)
     os.remove(txt_path)
     print("\n All done!! Your sentence piece model is at",join(join('spm',lang),txt_path.replace('.raw.txt','.model')),".")
 
-def mk_spm(lang):
+def mk_spm(lang, vocab_size):
     links_dir = join(pathlib.Path(__file__).parent.resolve(),'wiki_dump_links')
     model_dir = join(pathlib.Path(__file__).parent.resolve(),lang)
     pathlib.Path(links_dir).mkdir(parents=True, exist_ok=True)
@@ -122,10 +122,11 @@ def mk_spm(lang):
     wiki_paths = read_wiki_links(lang)
     extract_xml(lang,wiki_paths)
     linear_file = mk_linear(lang)
-    train_sentencepiece(linear_file,lang)
+    train_sentencepiece(linear_file, lang, vocab_size)
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Train a sentencepiece model on Wikipedia, ver 0.1')
     lang = args['--lang']
+    vocab_size = int(args['--vocab'])
     sp = spm.SentencePieceProcessor()
-    mk_spm(lang)
+    mk_spm(lang, vocab_size)

@@ -9,7 +9,7 @@ Usage:
   run.py --lang=<language_code> --cluster_data
   run.py --lang=<language_code> --train_fly
   run.py --lang=<language_code> --binarize_data
-  run.py --s2e
+  run.py --lang=<language_code> --query_expansion
 
   run.py (-h | --help)
   run.py --version
@@ -24,7 +24,7 @@ Options:
   --cluster_data                 Learn cluster names and apply clustering to the entire Wikipedia.
   --train_fly                    Train the fruit fly over dimensionality-reduced representations.
   --binarize_data                Apply the fruit fly to the entire Wikipedia.
-  --s2e                          Hack to apply simple wiki models to en wiki.
+  --query_expansion              Train ridge model for query expansion.
   -h --help                      Show this screen.
   --version                      Show version.
 
@@ -36,14 +36,18 @@ from docopt import docopt
 from glob import glob
 from random import shuffle
 import joblib
+import re
+import sentencepiece as spm
 
 from codecarbon import EmissionsTracker
 from spm.spm_train_on_wiki import mk_spm
 from datasets.get_wiki_data import mk_wiki_data
-from fly.train_models import train_umap, hack_umap_model, run_pca, hack_pca_model, train_birch, train_fly
-from fly.apply_models import apply_dimensionality_reduction, apply_fly
+from fly.train_models import train_umap, hack_umap_model, run_pca, hack_pca_model, train_birch, train_fly, train_query_expansion_model
+from fly.apply_models import apply_dimensionality_reduction, apply_dimensionality_reduction_titles, apply_fly
 from fly.prepare_clusters import generate_cluster_labels, generate_cluster_centroids
+from fly.vectorizer import vectorize_scale
 
+sp = spm.SentencePieceProcessor()
 
 def get_training_data(lang, train_spf_path):
 
@@ -81,7 +85,7 @@ def get_training_data(lang, train_spf_path):
     '''Get sample from other dump files, to get correct data distribution.'''
     required_article_count-=c
     if dump_split:
-        spfs = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles*sp")
+        spfs = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles*[0-9].sp")
         shuffle(spfs)
         for i in range(4):
             c = int(required_article_count / 4)
@@ -139,7 +143,7 @@ if __name__ == '__main__':
         train_path = f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles.train.sp"
 
     if args['--train_tokenizer'] or args['--pipeline']:
-        mk_spm(lang)
+        mk_spm(lang, 10000)
     
     if args['--download_wiki'] or args['--pipeline']:
         mk_wiki_data(lang, lang) #In the normal case, input and spm model case are the same language
@@ -194,10 +198,40 @@ if __name__ == '__main__':
         generate_cluster_centroids(train_path)
         best_logprob_power = int(config['PREPROCESSING']['logprob_power'])
         best_top_words = int(config['PREPROCESSING']['top_words'])
-        apply_fly(lang, best_logprob_power, best_top_words)
+        apply_fly(lang, best_logprob_power, best_top_words, True)
         if lang == 'simple':
-            apply_fly('simple', best_logprob_power, best_top_words, 'en')
+            apply_fly('simple', best_logprob_power, best_top_words, True, 'en')
 
+    if args['--query_expansion']:
+        def tokenize_text(sp, text):
+            text = ' '.join([wp for wp in sp.encode_as_pieces(text.lower())])
+            return text
+
+        _, config = read_config(lang)
+        best_logprob_power = int(config['PREPROCESSING']['logprob_power'])
+        best_top_words = int(config['PREPROCESSING']['top_words'])
+        hacked_path = config['RIDGE']['path']
+        hacked_m = joblib.load(hacked_path+'.m') 
+        sp.load(f'./spm/{lang}/{lang}wiki.model')
+        
+        spfs = glob(f"./datasets/data/{lang}/{lang}wiki-latest-pages-articles*sp")
+        for spf in spfs:
+            if "titles" in spf:
+                continue
+            print("Making title file for",spf)
+            input_file = open(spf)
+            out_file = spf.replace('.sp','.titles.sp')
+            out = open(out_file,'w')
+            for l in input_file:
+                if "<doc" in l:
+                    m = re.search('.*title="([^"]*)"',l)
+                    title = m.group(1)
+                    out.write(l)
+                    out.write(tokenize_text(sp, title)+'\n')
+                    out.write("</doc>\n")
+            out.close()
+        apply_dimensionality_reduction_titles(lang, hacked_path, best_logprob_power, best_top_words)
+        train_query_expansion_model(lang, train_path)
 
     #tracker.stop()
 

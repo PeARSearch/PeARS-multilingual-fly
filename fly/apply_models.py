@@ -74,7 +74,7 @@ def apply_hacked_umap(lang, ridge, spf, logprob_power, top_words, save=True):
     return dataset, titles
 
 
-def fly(trainlang, fly, spf, data_titles, savelang):
+def fly_cluster(trainlang, fly, spf, data_titles, savelang):
     print('--- Apply fly to',spf,'---')
     save_dir = f'./datasets/data/{savelang}/fhs'
 
@@ -85,23 +85,12 @@ def fly(trainlang, fly, spf, data_titles, savelang):
     print(umap_mat)
     cosines = 1 - cdist(umap_mat, cluster_centroids, metric="cosine")
     umap_labels = list(np.argpartition(cosines, -1, axis=1)[:, -1:].squeeze())
-    #umap_labels = []
-    #truncated_umap_mat = []
-    #print(cosines)
-    #for i in range(cosines.shape[0]):
-    #    if np.max(cosines[i]) > 0.99:
-    #        a = np.argmax(cosines[i])
-    #        umap_labels.append(a)
-    #        truncated_umap_mat.append(umap_mat[i])
-    #        #print(cosines[i][:30])
-    #        print('class',a,data_titles[i])
-    #umap_mat = np.array(truncated_umap_mat)
     print(umap_mat.shape, len(umap_labels))
 
     score, hashed_data = fly.evaluate(umap_mat,umap_mat,umap_labels,umap_labels)
 
     #Check length 
-    print(hashed_data.shape,len(data_titles))
+    print(score, hashed_data.shape,len(data_titles))
 
     #Save hashes per class 
     for cl in list(set(umap_labels)):
@@ -122,24 +111,52 @@ def fly(trainlang, fly, spf, data_titles, savelang):
     return score
 
 
+def fly(trainlang, fly, spf, data_titles, savelang):
+    print('--- Apply fly to',spf,'---')
+    umap_mat = joblib.load(spf.replace('.sp','.umap.m')).todense()
+    fake_umap_labels = list(np.zeros(umap_mat.shape[0]))
+    print(umap_mat.shape, len(fake_umap_labels))
+
+    score, hashed_data = fly.evaluate(umap_mat,umap_mat,fake_umap_labels,fake_umap_labels)
+
+    #Check length
+    print(hashed_data.shape,len(data_titles))
+    hfile = spf.replace('.sp','.fh')
+    joblib.dump(hashed_data, hfile)
+
+
+
 def apply_dimensionality_reduction(lang, hacked_path, logprob_power, top_words, brm):
     ridge_model = joblib.load(hacked_path)
     sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
     for spf in sp_files:
+        if "titles" in spf:
+            continue
         dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, top_words, True)
         if 'train' in spf:
              apply_birch(brm, dataset, titles, spf, True)
             
+def apply_dimensionality_reduction_titles(lang, hacked_path, logprob_power, top_words):
+    ridge_model = joblib.load(hacked_path)
+    sp_files = glob(join(f'./datasets/data/{lang}','*train.titles.sp'))
+    for spf in sp_files:
+        dataset, titles = apply_hacked_umap(lang, ridge_model, spf, logprob_power, top_words, True)
+            
 
-def apply_fly(lang=None, logprob_power=None, top_words=None, lang2=None):
+def apply_fly(lang=None, logprob_power=None, top_words=None, cluster=False, lang2=None):
     fly_model = joblib.load(glob(join(f'./fly/models/flies/{lang}','*fly.m'))[0])
     if lang2 != None:
-        sp_files = glob(join(f'./datasets/data/{lang2}','*.sp'))
+        sp_files = glob(join(f'./datasets/data/{lang2}','*[0-9].sp'))
     else:
-        sp_files = glob(join(f'./datasets/data/{lang}','*.sp'))
+        sp_files = glob(join(f'./datasets/data/{lang}','*[0-9].sp'))
     for spf in sp_files:
+        if "titles" in spf:
+            continue
         dataset, titles = vectorize_scale(lang, spf, logprob_power, top_words)
         if lang2 == None:
-            fly(lang, fly_model, spf, titles, lang)
+            lang2 = lang
+        if cluster:
+            fly_cluster(lang, fly_model, spf, titles, lang2)
         else:
             fly(lang, fly_model, spf, titles, lang2)
+

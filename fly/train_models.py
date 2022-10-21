@@ -193,4 +193,19 @@ def train_fly(lang=None, dataset=None, num_trials=None, kc_size=None, k=None):
             joblib.dump(fly_list[best],fly_path)
     return fly_path, best_overall_score
 
+def train_query_expansion_model(lang=None, spf=None):
+    print('\n\n--- Learning regression model for query expansion ---')
+
+    scores = []
+    m_titles = joblib.load(spf.replace('.sp','.titles.umap.m')).todense()
+    m_docs = joblib.load(spf.replace('.sp','.umap.m')).todense()
+
+    ridge = Ridge(alpha = 0.5)
+    ridge.fit(m_titles, m_docs)
+    score = ridge.score(m_titles, m_docs)
+    scores.append(score)
+    print("UMAP EXPANSION SCORE:",score)
+    savedir = join(Path(__file__).parent.resolve(),join("models/umap",lang))
+    savefile = join(savedir,lang+"wiki.expansion.m")
+    joblib.dump(ridge,savefile)
 
