@@ -10,7 +10,6 @@ Usage:
   run.py --lang=<language_code> --train_fly
   run.py --lang=<language_code> --binarize_data
   run.py --lang=<language_code> --query_expansion
-
   run.py (-h | --help)
   run.py --version
 
